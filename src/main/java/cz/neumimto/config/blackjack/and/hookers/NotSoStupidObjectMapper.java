@@ -15,6 +15,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -23,40 +24,19 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
 
 
     protected Set<Field> updatedFields = new HashSet<>();
+    protected Map<String, Class<?>> stubs = new HashMap<>();
 
-    /**
-     * Create a new object mapper that is not so stupid as ObjectMapper
-     *
-     * @param clazz The type of object
-     * @param <T> The type
-     * @return An appropriate object mapper instance. May be shared with other users.
-     * @throws ObjectMappingException If invalid annotated fields are presented
-     */
     @SuppressWarnings("unchecked")
     public static <T> ObjectMapper<T> forClass(@NonNull Class<T> clazz) throws ObjectMappingException {
         return new NotSoStupidObjectMapper<>(clazz);
     }
 
-    /**
-     * Creates a new object mapper bound to the given object.
-     *
-     * @param obj The object
-     * @param <T> The object type
-     * @return An appropriate object mapper instance.
-     * @throws ObjectMappingException
-     */
     @SuppressWarnings("unchecked")
     public static <T> ObjectMapper<T>.BoundInstance forObject(@NonNull T obj) throws ObjectMappingException {
         Preconditions.checkNotNull(obj);
         return forClass((Class<T>) obj.getClass()).bind(obj);
     }
 
-    /**
-     * Create a new object mapper of a given type
-     *
-     * @param clazz The type this object mapper will work with
-     * @throws ObjectMappingException if the provided class is in someway invalid
-     */
     protected NotSoStupidObjectMapper(Class<T> clazz) throws ObjectMappingException {
         super(clazz);
     }
