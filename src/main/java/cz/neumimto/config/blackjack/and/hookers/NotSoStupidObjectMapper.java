@@ -3,6 +3,7 @@ package cz.neumimto.config.blackjack.and.hookers;
 import com.google.common.base.Preconditions;
 import com.google.common.reflect.TypeToken;
 import cz.neumimto.config.blackjack.and.hookers.annotations.CustomAdapter;
+import cz.neumimto.config.blackjack.and.hookers.annotations.Discriminator;
 import cz.neumimto.config.blackjack.and.hookers.annotations.Static;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
@@ -24,7 +25,27 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
 
 
     protected Set<Field> updatedFields = new HashSet<>();
-    protected Map<String, Class<?>> stubs = new HashMap<>();
+    protected Map<Class<?>, DiscriminatorData> stubs = new HashMap<>();
+
+    public void registerDiscriminatorType(Class<?> iface, Class<?> facade) {
+        //Inherited from super classes
+        if (type.isAnnotationPresent(Discriminator.class)) {
+            Discriminator annotation = type.getAnnotation(Discriminator.class);
+        } else {
+            TypeToken<?>.TypeSet interfaces = TypeToken.of(type).getTypes().interfaces();
+            for (TypeToken<?> anInterface : interfaces) {
+                if (anInterface.getRawType().isAnnotationPresent(Discriminator.class)) {
+                    Discriminator annotation = type.getAnnotation(Discriminator.class);
+
+                }
+            }
+        }
+    }
+
+    private class DiscriminatorData {
+        public String getter;
+        public Set<Class<?>> types = new HashSet<>();
+    }
 
     @SuppressWarnings("unchecked")
     public static <T> ObjectMapper<T> forClass(@NonNull Class<T> clazz) throws ObjectMappingException {

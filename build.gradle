@@ -16,4 +16,5 @@ repositories {
 
 dependencies {
     compileOnly 'org.spongepowered:configurate-hocon:3.6'
+    testCompile 'junit:junit:4.12'
 }
