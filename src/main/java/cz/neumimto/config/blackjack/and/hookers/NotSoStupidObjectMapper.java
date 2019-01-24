@@ -161,7 +161,7 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                     }
                 } else {
                     Class<?> aClass = serial.getClass();
-                    if (aClass.isAnnotationPresent(EnableMemberInjection.class)) {
+                    if (aClass.isAnnotationPresent(EnableSetterInjection.class)) {
                         for (Method declaredMethod : aClass.getDeclaredMethods()) {
                             if (declaredMethod.isAnnotationPresent(Setter.class)) {
                                 declaredMethod.invoke(serial, instance);

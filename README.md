@@ -14,6 +14,28 @@ Examples:
 Unlike default ObjectMapper this one allows you to supply custom (de)serialization logic for one more more specific 
 fields within a `@ConfigSerializable`
 
+
+----
+
+In some cases you might want to get reference to the object which is currently being deserialized within `MyCustomTypeAdapter`. 
+
+```java
+
+@EnableSetterInjection
+public class MyCustomTypeAdapter extends TypeSeriializer {
+    
+    private MyObject root;
+    
+    @Setter
+    public void setRoot(MyObject object) {
+        this.root = object;
+    }
+    .....
+}
+
+```
+
+
 ----
 
     @Settings
