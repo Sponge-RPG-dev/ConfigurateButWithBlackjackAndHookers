@@ -2,9 +2,7 @@ package cz.neumimto.config.blackjack.and.hookers;
 
 import com.google.common.base.Preconditions;
 import com.google.common.reflect.TypeToken;
-import cz.neumimto.config.blackjack.and.hookers.annotations.CustomAdapter;
-import cz.neumimto.config.blackjack.and.hookers.annotations.Discriminator;
-import cz.neumimto.config.blackjack.and.hookers.annotations.Static;
+import cz.neumimto.config.blackjack.and.hookers.annotations.*;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.objectmapping.ObjectMapper;
@@ -13,8 +11,10 @@ import ninja.leaping.configurate.objectmapping.Setting;
 import ninja.leaping.configurate.objectmapping.serialize.TypeSerializer;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -23,22 +23,33 @@ import java.util.Set;
 
 public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
 
-
     protected Set<Field> updatedFields = new HashSet<>();
     protected Map<Class<?>, DiscriminatorData> stubs = new HashMap<>();
 
-    public void registerDiscriminatorType(Class<?> iface, Class<?> facade) {
-        //Inherited from super classes
-        if (type.isAnnotationPresent(Discriminator.class)) {
-            Discriminator annotation = type.getAnnotation(Discriminator.class);
-        } else {
-            TypeToken<?>.TypeSet interfaces = TypeToken.of(type).getTypes().interfaces();
-            for (TypeToken<?> anInterface : interfaces) {
-                if (anInterface.getRawType().isAnnotationPresent(Discriminator.class)) {
-                    Discriminator annotation = type.getAnnotation(Discriminator.class);
+    /*
+        public void registerDiscriminatorType(Class<?> iface, Class<?> facade) {
+            //Inherited from super classes
+            if (type.isAnnotationPresent(Discriminator.class)) {
+                Discriminator annotation = type.getAnnotation(Discriminator.class);
+            } else {
+                TypeToken<?>.TypeSet interfaces = TypeToken.of(type).getTypes().interfaces();
+                for (TypeToken<?> anInterface : interfaces) {
+                    if (anInterface.getRawType().isAnnotationPresent(Discriminator.class)) {
+                        Discriminator annotation = type.getAnnotation(Discriminator.class);
 
+                    }
                 }
             }
+        }
+    */
+
+    private static Class<? extends Annotation > inject;
+
+    static {
+        try {
+            inject = (Class<? extends Annotation>) Class.forName("javax.inject.Inject");
+        } catch (Exception e) {
+
         }
     }
 
@@ -149,6 +160,15 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                         serializeTo(instance, node);
                     }
                 } else {
+                    Class<?> aClass = serial.getClass();
+                    if (aClass.isAnnotationPresent(EnableMemberInjection.class)) {
+                        for (Method declaredMethod : aClass.getDeclaredMethods()) {
+                            if (declaredMethod.isAnnotationPresent(Setter.class)) {
+                                declaredMethod.invoke(serial, instance);
+                                break;
+                            }
+                        }
+                    }
                     switch (policy) {
                         case ONCE:
                             if (!updatedFields.contains(field)) {
@@ -167,6 +187,8 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                 }
             } catch (IllegalAccessException e) {
                 throw new ObjectMappingException("Unable to deserialize field " + field.getName(), e);
+            } catch (InvocationTargetException e) {
+                throw new ObjectMappingException("Unable to invoker @setter method on " + serial.getClass().getSimpleName(), e);
             }
         }
 
