@@ -43,7 +43,7 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
         }
     */
 
-    private static Class<? extends Annotation > inject;
+    private static Class<? extends Annotation> inject;
 
     static {
         try {
@@ -146,6 +146,19 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                             + this.fieldType);
                 }
             }
+            Class<?> aClass = serial.getClass();
+            if (aClass.isAnnotationPresent(EnableSetterInjection.class)) {
+                for (Method declaredMethod : aClass.getDeclaredMethods()) {
+                    if (declaredMethod.isAnnotationPresent(Setter.class)) {
+                        try {
+                            declaredMethod.invoke(serial, instance);
+                        } catch (IllegalAccessException | InvocationTargetException e) {
+                            throw new ObjectMappingException("Unable to invoker @setter method on " + serial.getClass().getSimpleName(), e);
+                        }
+                        break;
+                    }
+                }
+            }
             Object newVal = node.isVirtual() ? null : serial.deserialize(this.fieldType, node);
             try {
                 if (newVal == null) {
@@ -160,15 +173,6 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                         serializeTo(instance, node);
                     }
                 } else {
-                    Class<?> aClass = serial.getClass();
-                    if (aClass.isAnnotationPresent(EnableSetterInjection.class)) {
-                        for (Method declaredMethod : aClass.getDeclaredMethods()) {
-                            if (declaredMethod.isAnnotationPresent(Setter.class)) {
-                                declaredMethod.invoke(serial, instance);
-                                break;
-                            }
-                        }
-                    }
                     switch (policy) {
                         case ONCE:
                             if (!updatedFields.contains(field)) {
@@ -187,8 +191,6 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                 }
             } catch (IllegalAccessException e) {
                 throw new ObjectMappingException("Unable to deserialize field " + field.getName(), e);
-            } catch (InvocationTargetException e) {
-                throw new ObjectMappingException("Unable to invoker @setter method on " + serial.getClass().getSimpleName(), e);
             }
         }
 
