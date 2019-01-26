@@ -4,8 +4,14 @@ import java.lang.annotation.*;
 
 @Inherited
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.FIELD)
+@Target(ElementType.TYPE)
 public @interface Discriminator {
-    String key();
     String value();
+
+    @Inherited
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.TYPE)
+    @interface Value {
+        String value();
+    }
 }

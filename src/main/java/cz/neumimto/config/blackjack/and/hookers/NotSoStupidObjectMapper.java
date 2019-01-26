@@ -2,7 +2,11 @@ package cz.neumimto.config.blackjack.and.hookers;
 
 import com.google.common.base.Preconditions;
 import com.google.common.reflect.TypeToken;
-import cz.neumimto.config.blackjack.and.hookers.annotations.*;
+import cz.neumimto.config.blackjack.and.hookers.annotations.CustomAdapter;
+import cz.neumimto.config.blackjack.and.hookers.annotations.Discriminator;
+import cz.neumimto.config.blackjack.and.hookers.annotations.EnableSetterInjection;
+import cz.neumimto.config.blackjack.and.hookers.annotations.Setter;
+import cz.neumimto.config.blackjack.and.hookers.annotations.Static;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.objectmapping.ObjectMapper;
@@ -11,7 +15,6 @@ import ninja.leaping.configurate.objectmapping.Setting;
 import ninja.leaping.configurate.objectmapping.serialize.TypeSerializer;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -24,38 +27,10 @@ import java.util.Set;
 public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
 
     protected Set<Field> updatedFields = new HashSet<>();
-    protected Map<Class<?>, DiscriminatorData> stubs = new HashMap<>();
+    protected Map<Class<?>, Map<String, Class<?>>> stubs = new HashMap<>();
 
-    /*
-        public void registerDiscriminatorType(Class<?> iface, Class<?> facade) {
-            //Inherited from super classes
-            if (type.isAnnotationPresent(Discriminator.class)) {
-                Discriminator annotation = type.getAnnotation(Discriminator.class);
-            } else {
-                TypeToken<?>.TypeSet interfaces = TypeToken.of(type).getTypes().interfaces();
-                for (TypeToken<?> anInterface : interfaces) {
-                    if (anInterface.getRawType().isAnnotationPresent(Discriminator.class)) {
-                        Discriminator annotation = type.getAnnotation(Discriminator.class);
-
-                    }
-                }
-            }
-        }
-    */
-
-    private static Class<? extends Annotation> inject;
-
-    static {
-        try {
-            inject = (Class<? extends Annotation>) Class.forName("javax.inject.Inject");
-        } catch (Exception e) {
-
-        }
-    }
-
-    private class DiscriminatorData {
-        public String getter;
-        public Set<Class<?>> types = new HashSet<>();
+    protected NotSoStupidObjectMapper(Class<T> clazz) throws ObjectMappingException {
+        super(clazz);
     }
 
     @SuppressWarnings("unchecked")
@@ -69,15 +44,16 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
         return forClass((Class<T>) obj.getClass()).bind(obj);
     }
 
-    protected NotSoStupidObjectMapper(Class<T> clazz) throws ObjectMappingException {
-        super(clazz);
+    public <I, X extends I> void registerDiscriminatorType(Class<? extends I> iface, Class<? extends X> impl) throws ObjectMappingException {
+        if (impl.isAnnotationPresent(Discriminator.Value.class)) {
+            Discriminator.Value annotation = impl.getAnnotation(Discriminator.Value.class);
+            String value = annotation.value();
+            Map<String, Class<?>> stringClassMap = stubs.computeIfAbsent(iface, k -> new HashMap<>());
+            stringClassMap.put(value, impl);
+        }
+        throw new ObjectMappingException(impl.getSimpleName() + " is missing @Discriminator.Value");
     }
 
-    private enum StaticFieldPolicy {
-        NOT_STATIC,
-        ONCE,
-        NO_LIMITS
-    }
 
     @Override
     protected void collectFields(Map<String, ObjectMapper.FieldData> cachedFields, Class<? super T> clazz) throws ObjectMappingException {
@@ -95,8 +71,16 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                     policy = annotation.updateable() ? StaticFieldPolicy.NO_LIMITS : StaticFieldPolicy.ONCE;
                 }
 
+                Class<?> type = field.getType();
+                Class<?> dtype = null;
+                if (stubs.containsKey(type) && field.isAnnotationPresent(Discriminator.class)) {
+                    Map<String, Class<?>> stringClassMap = stubs.get(type);
+                    Discriminator annotation = field.getAnnotation(Discriminator.class);
+                    dtype = stringClassMap.get(annotation.value());
+                }
+
                 TypeSerializer<?> custom = null;
-                if (field.isAnnotationPresent(CustomAdapter.class)) {
+                if (field.isAnnotationPresent(CustomAdapter.class) && dtype == null) {
                     CustomAdapter adapter = field.getAnnotation(CustomAdapter.class);
                     Class<? extends TypeSerializer<?>> value = adapter.value();
                     try {
@@ -107,7 +91,7 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                     }
                 }
 
-                FieldData data = new NotSoStupidFieldData(field, setting.comment(), custom, policy);
+                FieldData data = new NotSoStupidFieldData(field, setting.comment(), custom, policy, dtype);
                 field.setAccessible(true);
                 if (!cachedFields.containsKey(path)) {
                     cachedFields.put(path, data);
@@ -116,23 +100,32 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
         }
     }
 
+    public enum StaticFieldPolicy {
+        NOT_STATIC,
+        ONCE,
+        NO_LIMITS
+    }
 
     protected class NotSoStupidFieldData extends ObjectMapper.FieldData {
 
         private final Field field;
         private final TypeToken<?> fieldType;
         private final TypeSerializer<?> customSerializer;
-        private StaticFieldPolicy policy;
         private final String comment;
+        private StaticFieldPolicy policy;
+        private TypeToken dtype;
 
 
-        public NotSoStupidFieldData(Field field, String comment, TypeSerializer<?> customSerializer, StaticFieldPolicy policy) throws ObjectMappingException {
+        public NotSoStupidFieldData(Field field, String comment, TypeSerializer<?> customSerializer, StaticFieldPolicy policy,
+                Class<?> dtype)
+                throws ObjectMappingException {
             super(field, comment);
             this.field = field;
             this.comment = comment;
             this.fieldType = TypeToken.of(field.getGenericType());
             this.customSerializer = customSerializer;
             this.policy = policy;
+            this.dtype = TypeToken.of(dtype);
         }
 
         public void deserializeFrom(Object instance, ConfigurationNode node) throws ObjectMappingException {
@@ -140,7 +133,11 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
             if (customSerializer != null) {
                 serial = customSerializer;
             } else {
-                serial = node.getOptions().getSerializers().get(this.fieldType);
+                if (dtype != null) {
+                    serial = node.getOptions().getSerializers().get(dtype);
+                } else {
+                    serial = node.getOptions().getSerializers().get(this.fieldType);
+                }
                 if (serial == null) {
                     throw new ObjectMappingException("No TypeSerializer found for field " + field.getName() + " of type "
                             + this.fieldType);
