@@ -78,11 +78,13 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
 
                 Class<?> type = field.getType();
                 Class<?> dtype = null;
+                /*
                 if (stubs.containsKey(type) && field.isAnnotationPresent(Discriminator.class)) {
                     Map<String, Class<?>> stringClassMap = stubs.get(type);
                     Discriminator annotation = field.getAnnotation(Discriminator.class);
                     dtype = stringClassMap.get(annotation.value());
                 }
+                */
                 Class<? extends Collection> collectionImplType = null;
                 TypeSerializer<?> custom = null;
                 if (field.isAnnotationPresent(CustomAdapter.class) && dtype == null) {
