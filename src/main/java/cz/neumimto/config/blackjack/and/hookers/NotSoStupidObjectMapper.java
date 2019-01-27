@@ -125,7 +125,7 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
             this.fieldType = TypeToken.of(field.getGenericType());
             this.customSerializer = customSerializer;
             this.policy = policy;
-            this.dtype = TypeToken.of(dtype);
+           // this.dtype = TypeToken.of(dtype);
         }
 
         public void deserializeFrom(Object instance, ConfigurationNode node) throws ObjectMappingException {
