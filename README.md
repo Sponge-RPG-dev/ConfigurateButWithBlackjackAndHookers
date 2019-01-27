@@ -2,8 +2,7 @@
 
 Not so stupid object mapper 
 
-WIP, might now work yet
-
+WIP, but works
 Examples: 
 
   
