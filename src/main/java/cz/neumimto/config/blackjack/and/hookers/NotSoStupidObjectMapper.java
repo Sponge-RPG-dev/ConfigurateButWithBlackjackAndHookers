@@ -46,6 +46,9 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
         return forClass((Class<T>) obj.getClass()).bind(obj);
     }
 
+    /**
+     * dont use this one yet
+     */
     public <I, X extends I> void registerDiscriminatorType(Class<? extends I> iface, Class<? extends X> impl) throws ObjectMappingException {
         if (impl.isAnnotationPresent(Discriminator.Value.class)) {
             Discriminator.Value annotation = impl.getAnnotation(Discriminator.Value.class);
