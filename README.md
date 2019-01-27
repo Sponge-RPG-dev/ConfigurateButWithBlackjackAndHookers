@@ -72,4 +72,6 @@ On top of that writing a code directly against any specific collection impl in j
     private Set<T> someSortedSet;
 ```
 
-As you might already expect `@AsCollectionImpl` will clash with `@CustomAdapter`
+As you might already expect `@AsCollectionImpl` will clash with `@CustomAdapter`. If both annotation are present per one specific field `@CustomAdapter` will be prioritized.
+
+Fields annotated with `@AsCollectionImpl` wont ever be null after deserialization. So you can get rid of some null checks as long as you use the annotation.
