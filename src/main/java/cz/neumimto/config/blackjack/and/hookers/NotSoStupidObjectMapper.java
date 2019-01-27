@@ -2,6 +2,7 @@ package cz.neumimto.config.blackjack.and.hookers;
 
 import com.google.common.base.Preconditions;
 import com.google.common.reflect.TypeToken;
+import cz.neumimto.config.blackjack.and.hookers.annotations.AsCollectionImpl;
 import cz.neumimto.config.blackjack.and.hookers.annotations.CustomAdapter;
 import cz.neumimto.config.blackjack.and.hookers.annotations.Discriminator;
 import cz.neumimto.config.blackjack.and.hookers.annotations.EnableSetterInjection;
@@ -19,6 +20,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -78,7 +80,7 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                     Discriminator annotation = field.getAnnotation(Discriminator.class);
                     dtype = stringClassMap.get(annotation.value());
                 }
-
+                Class<? extends Collection> collectionImplType = null;
                 TypeSerializer<?> custom = null;
                 if (field.isAnnotationPresent(CustomAdapter.class) && dtype == null) {
                     CustomAdapter adapter = field.getAnnotation(CustomAdapter.class);
@@ -89,9 +91,11 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                         throw new ObjectMappingException("Could not create a new instance from " + value.getCanonicalName()
                                 + ". The default constructor is missing, or is not visible", e);
                     }
+                } else if (dtype == null && field.isAnnotationPresent(AsCollectionImpl.class)){
+                    collectionImplType = field.getAnnotation(AsCollectionImpl.class).value();
                 }
 
-                FieldData data = new NotSoStupidFieldData(field, setting.comment(), custom, policy, dtype);
+                FieldData data = new NotSoStupidFieldData(field, setting.comment(), custom, policy, dtype, collectionImplType);
                 field.setAccessible(true);
                 if (!cachedFields.containsKey(path)) {
                     cachedFields.put(path, data);
@@ -113,11 +117,12 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
         private final TypeSerializer<?> customSerializer;
         private final String comment;
         private StaticFieldPolicy policy;
+        private final Class<? extends Collection> collectionImplType;
         private TypeToken dtype;
 
 
         public NotSoStupidFieldData(Field field, String comment, TypeSerializer<?> customSerializer, StaticFieldPolicy policy,
-                Class<?> dtype)
+                Class<?> dtype, Class<? extends Collection> collectionImplType)
                 throws ObjectMappingException {
             super(field, comment);
             this.field = field;
@@ -126,6 +131,7 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
             this.customSerializer = customSerializer;
             this.policy = policy;
            // this.dtype = TypeToken.of(dtype);
+            this.collectionImplType = collectionImplType;
         }
 
         public void deserializeFrom(Object instance, ConfigurationNode node) throws ObjectMappingException {
@@ -170,6 +176,16 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                         serializeTo(instance, node);
                     }
                 } else {
+                    try {
+                        if (newVal == null && collectionImplType != null) {
+                            newVal = collectionImplType.getConstructor().newInstance();
+                        } else if (newVal != null && collectionImplType != null) {
+                            Collection collection = collectionImplType.getConstructor().newInstance();
+                            collection.addAll((Collection) newVal);
+                        }
+                    } catch (NoSuchMethodException | InstantiationException | InvocationTargetException e) {
+                        throw new ObjectMappingException("Collection interface implementation " + collectionImplType + " is missing default ctr.");
+                    }
                     switch (policy) {
                         case ONCE:
                             if (!updatedFields.contains(field)) {
@@ -190,6 +206,7 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                 throw new ObjectMappingException("Unable to deserialize field " + field.getName(), e);
             }
         }
+
 
         @SuppressWarnings("rawtypes")
         public void serializeTo(Object instance, ConfigurationNode node) throws ObjectMappingException {

@@ -47,3 +47,24 @@ Unlike default ObjectMapper its allowed to de(serialize) static fields
 
 Additionally if you are reloading your config its possible to define that the static variable may, or may not be 
 updated only once via `@Static(updateable=true/false)`
+
+
+----
+
+Unlike default ObjectMapper its possible to set collection type. By default ObjectMapper will map only fields as follows:
+
+
+List<T> -> ArrayList<T>
+Set<T> -> HashSet<T>
+
+This is not very useful if you from some various reasons want to store your data in a different data structure such TreeSet, SortedList etc.
+
+One might think that you can declared a `@Settings` field already having a desired type impl. However configurate fails to deliver even here.
+On top of that writing a code directly against any specific collection impl in java is always seen like a bad practice.
+
+    @Settings
+    @AsCollectionImpl(TreeSet.class)
+    private Set<T> someSortedSet;
+
+
+As you might already expect `@AsCollectionImpl` will clash with `@CustomAdapter`
