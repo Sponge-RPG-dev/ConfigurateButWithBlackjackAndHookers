@@ -187,6 +187,7 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                         } else if (newVal != null && collectionImplType != null) {
                             Collection collection = collectionImplType.getConstructor().newInstance();
                             collection.addAll((Collection) newVal);
+                            newVal = collection;
                         }
                     } catch (NoSuchMethodException | InstantiationException | InvocationTargetException e) {
                         throw new ObjectMappingException("Collection interface implementation " + collectionImplType + " is missing default ctr.");
