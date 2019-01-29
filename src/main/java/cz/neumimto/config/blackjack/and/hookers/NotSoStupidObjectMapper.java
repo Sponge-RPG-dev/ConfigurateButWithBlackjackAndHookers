@@ -175,17 +175,17 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                         existingVal = field.get(instance);
                     } else {
                         existingVal = field.get(null);
-
-
-                        if (existingVal == null && collectionImplType != null) {
-                            try {
-                                existingVal = collectionImplType.getConstructor().newInstance();
-                            } catch (NoSuchMethodException | InstantiationException | InvocationTargetException e) {
-                                throw new ObjectMappingException("Collection interface implementation " + collectionImplType + " is missing default ctr.");
-                            }
-                        }
-
                     }
+
+                    if (existingVal == null && collectionImplType != null) {
+                        try {
+                            existingVal = collectionImplType.getConstructor().newInstance();
+                        } catch (NoSuchMethodException | InstantiationException | InvocationTargetException e) {
+                            throw new ObjectMappingException("Collection interface implementation " + collectionImplType + " is missing default ctr.");
+                        }
+                    }
+
+
                     if (existingVal != null) {
                         serializeTo(instance, node);
                     }
