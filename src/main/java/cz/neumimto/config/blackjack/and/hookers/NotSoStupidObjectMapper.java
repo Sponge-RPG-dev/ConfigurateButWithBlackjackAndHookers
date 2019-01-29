@@ -96,7 +96,7 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                         throw new ObjectMappingException("Could not create a new instance from " + value.getCanonicalName()
                                 + ". The default constructor is missing, or is not visible", e);
                     }
-                } else if (dtype == null && field.isAnnotationPresent(AsCollectionImpl.class)){
+                } else if (dtype == null && field.isAnnotationPresent(AsCollectionImpl.class)) {
                     collectionImplType = field.getAnnotation(AsCollectionImpl.class).value();
                 }
 
@@ -127,7 +127,7 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
 
 
         public NotSoStupidFieldData(Field field, String comment, TypeSerializer<?> customSerializer, StaticFieldPolicy policy,
-                Class<?> dtype, Class<? extends Collection> collectionImplType)
+                                    Class<?> dtype, Class<? extends Collection> collectionImplType)
                 throws ObjectMappingException {
             super(field, comment);
             this.field = field;
@@ -135,7 +135,7 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
             this.fieldType = TypeToken.of(field.getGenericType());
             this.customSerializer = customSerializer;
             this.policy = policy;
-           // this.dtype = TypeToken.of(dtype);
+            // this.dtype = TypeToken.of(dtype);
             this.collectionImplType = collectionImplType;
         }
 
@@ -176,16 +176,13 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                     } else {
                         existingVal = field.get(null);
 
-                        try {
-                            if (existingVal == null && collectionImplType != null) {
+
+                        if (existingVal == null && collectionImplType != null) {
+                            try {
                                 existingVal = collectionImplType.getConstructor().newInstance();
-                            } else if (existingVal != null && collectionImplType != null) {
-                                Collection collection = collectionImplType.getConstructor().newInstance();
-                                collection.addAll((Collection) existingVal);
-                                existingVal = collection;
+                            } catch (NoSuchMethodException | InstantiationException | InvocationTargetException e) {
+                                throw new ObjectMappingException("Collection interface implementation " + collectionImplType + " is missing default ctr.");
                             }
-                        } catch (NoSuchMethodException | InstantiationException | InvocationTargetException e) {
-                            throw new ObjectMappingException("Collection interface implementation " + collectionImplType + " is missing default ctr.");
                         }
 
                     }
@@ -193,6 +190,17 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                         serializeTo(instance, node);
                     }
                 } else {
+
+
+                    if (collectionImplType != null) {
+                        try {
+                            Collection collection = collectionImplType.getConstructor().newInstance();
+                            collection.addAll((Collection) newVal);
+                            newVal = collection;
+                        } catch (NoSuchMethodException | InstantiationException | InvocationTargetException e) {
+                            throw new ObjectMappingException("Collection interface implementation " + collectionImplType + " is missing default ctr.");
+                        }
+                    }
 
                     switch (policy) {
                         case ONCE:
