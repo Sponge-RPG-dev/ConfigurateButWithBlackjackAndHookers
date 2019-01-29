@@ -187,7 +187,7 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
 
 
                     if (existingVal != null) {
-                        serializeTo(instance, node);
+                        serializeTo(instance, node, existingVal);
                     }
                 } else {
 
@@ -225,9 +225,12 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
 
 
         @SuppressWarnings("rawtypes")
-        public void serializeTo(Object instance, ConfigurationNode node) throws ObjectMappingException {
+        public void serializeTo(Object instance, ConfigurationNode node, Object existingVal) throws ObjectMappingException {
             try {
                 Object fieldVal = this.field.get(instance);
+                if (fieldVal == null) {
+                    fieldVal = existingVal;
+                }
                 if (fieldVal == null) {
                     node.setValue(null);
                 } else {
