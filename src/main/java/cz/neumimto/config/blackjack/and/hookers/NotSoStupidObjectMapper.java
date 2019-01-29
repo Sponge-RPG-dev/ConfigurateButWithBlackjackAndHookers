@@ -175,23 +175,25 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                         existingVal = field.get(instance);
                     } else {
                         existingVal = field.get(null);
-                    }
 
+                        try {
+                            if (existingVal == null && collectionImplType != null) {
+                                existingVal = collectionImplType.getConstructor().newInstance();
+                            } else if (existingVal != null && collectionImplType != null) {
+                                Collection collection = collectionImplType.getConstructor().newInstance();
+                                collection.addAll((Collection) existingVal);
+                                existingVal = collection;
+                            }
+                        } catch (NoSuchMethodException | InstantiationException | InvocationTargetException e) {
+                            throw new ObjectMappingException("Collection interface implementation " + collectionImplType + " is missing default ctr.");
+                        }
+
+                    }
                     if (existingVal != null) {
                         serializeTo(instance, node);
                     }
                 } else {
-                    try {
-                        if (newVal == null && collectionImplType != null) {
-                            newVal = collectionImplType.getConstructor().newInstance();
-                        } else if (newVal != null && collectionImplType != null) {
-                            Collection collection = collectionImplType.getConstructor().newInstance();
-                            collection.addAll((Collection) newVal);
-                            newVal = collection;
-                        }
-                    } catch (NoSuchMethodException | InstantiationException | InvocationTargetException e) {
-                        throw new ObjectMappingException("Collection interface implementation " + collectionImplType + " is missing default ctr.");
-                    }
+
                     switch (policy) {
                         case ONCE:
                             if (!updatedFields.contains(field)) {
