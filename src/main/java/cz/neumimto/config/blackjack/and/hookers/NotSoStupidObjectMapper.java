@@ -2,12 +2,7 @@ package cz.neumimto.config.blackjack.and.hookers;
 
 import com.google.common.base.Preconditions;
 import com.google.common.reflect.TypeToken;
-import cz.neumimto.config.blackjack.and.hookers.annotations.AsCollectionImpl;
-import cz.neumimto.config.blackjack.and.hookers.annotations.CustomAdapter;
-import cz.neumimto.config.blackjack.and.hookers.annotations.Discriminator;
-import cz.neumimto.config.blackjack.and.hookers.annotations.EnableSetterInjection;
-import cz.neumimto.config.blackjack.and.hookers.annotations.Setter;
-import cz.neumimto.config.blackjack.and.hookers.annotations.Static;
+import cz.neumimto.config.blackjack.and.hookers.annotations.*;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.objectmapping.ObjectMapper;
@@ -186,6 +181,9 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                         }
                     }
 
+                    if (existingVal == null && field.isAnnotationPresent(Default.class)) {
+                        existingVal = field.getAnnotation(Default.class).value().getConstructor().newInstance();
+                    }
 
                     if (existingVal != null) {
                         serializeTo(instance, node);
@@ -219,7 +217,7 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                     }
 
                 }
-            } catch (IllegalAccessException e) {
+            } catch (IllegalAccessException | NoSuchMethodException | InvocationTargetException | InstantiationException e) {
                 throw new ObjectMappingException("Unable to deserialize field " + field.getName(), e);
             }
         }

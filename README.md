@@ -1,9 +1,21 @@
 # ConfigurateButWithBlackjackAndHookers
 
-Not so stupid object mapper 
+Not-so-stupid objectmapper 
+
+This library provides some nice-to have features which default ObjectMapper lacks.
 
 WIP, but works
 Examples: 
+
+####Usage ####
+The mapper is compatible with ObjectMapper. 
+
+```java
+
+```
+
+
+---
 
 ```java
     @Settings
@@ -75,3 +87,16 @@ On top of that writing a code directly against any specific collection impl in j
 As you might already expect `@AsCollectionImpl` will clash with `@CustomAdapter`. If both annotation are present per one specific field `@CustomAdapter` will be prioritized.
 
 Fields annotated with `@AsCollectionImpl` wont ever be null after deserialization. So you can get rid of some null checks as long as you use the annotation.
+
+
+---
+
+Default ObjectMapper does not support custom handlers of `null`s.
+Sometimes you want to ensure that field value is never null even if the node is missing in the config file.  
+
+
+```java
+    @Settings
+    @Default(MyObjectDefaultImpl.class)
+    private MyObject myobject;
+```
