@@ -6,6 +6,7 @@ import cz.neumimto.config.blackjack.and.hookers.annotations.*;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.objectmapping.ObjectMapper;
+import ninja.leaping.configurate.objectmapping.ObjectMapperFactory;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import ninja.leaping.configurate.objectmapping.Setting;
 import ninja.leaping.configurate.objectmapping.serialize.TypeSerializer;
@@ -71,7 +72,7 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                     policy = annotation.updateable() ? StaticFieldPolicy.NO_LIMITS : StaticFieldPolicy.ONCE;
                 }
 
-                Class<?> type = field.getType();
+
                 Class<?> dtype = null;
                 /*
                 if (stubs.containsKey(type) && field.isAnnotationPresent(Discriminator.class)) {
@@ -136,6 +137,12 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
 
         public void deserializeFrom(Object instance, ConfigurationNode node) throws ObjectMappingException {
             TypeSerializer<?> serial;
+            node.getOptions().setObjectMapperFactory(new ObjectMapperFactory() {
+                @Override
+                public @NonNull <T> ObjectMapper<T> getMapper(@NonNull Class<T> type) throws ObjectMappingException {
+                    return new NotSoStupidObjectMapper<>(type);
+                }
+            });
             if (customSerializer != null) {
                 serial = customSerializer;
             } else {
