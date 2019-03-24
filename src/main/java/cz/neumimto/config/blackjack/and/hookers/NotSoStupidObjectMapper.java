@@ -27,6 +27,8 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
     protected Set<Field> updatedFields = new HashSet<>();
     protected Map<Class<?>, Map<String, Class<?>>> stubs = new HashMap<>();
 
+    private Map<String, ObjectMapper.FieldData> cachedFields;
+
     protected NotSoStupidObjectMapper(Class<T> clazz) throws ObjectMappingException {
         super(clazz);
     }
@@ -103,6 +105,7 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
                 }
             }
         }
+        this.cachedFields = cachedFields;
     }
 
     public enum StaticFieldPolicy {
@@ -271,5 +274,57 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
         protected TypeToken<?> getFieldType() {
             return fieldType;
         }
+    }
+
+    @Override
+    public BoundInstance bind(T instance) {
+        return new NSSBoundInstance(instance);
+    }
+
+    @Override
+    public BoundInstance bindToNew() throws ObjectMappingException {
+        return new NSSBoundInstance(constructObject());
+    }
+
+    public class NSSBoundInstance extends BoundInstance {
+        private final T t;
+
+        protected NSSBoundInstance(T t) {
+            super(t);
+            this.t = t;
+        }
+
+        public T populate(ConfigurationNode source) throws ObjectMappingException {
+            for (Map.Entry<String, FieldData> ent : cachedFields.entrySet()) {
+                ConfigurationNode node = source.getNode(ent.getKey());
+                node.getOptions().setObjectMapperFactory(NotSoStupidObjectMapper::new);
+                ent.getValue().deserializeFrom(t, node);
+            }
+            return t;
+        }
+
+        /**
+         * Serialize the data contained in annotated fields to the configuration node.
+         *
+         * @param target The target node to serialize to
+         * @throws ObjectMappingException if serialization was not possible due to some error.
+         */
+        public void serialize(ConfigurationNode target) throws ObjectMappingException {
+            for (Map.Entry<String, FieldData> ent : cachedFields.entrySet()) {
+                ConfigurationNode node = target.getNode(ent.getKey());
+                node.getOptions().setObjectMapperFactory(NotSoStupidObjectMapper::new);
+                ent.getValue().serializeTo(t, node);
+            }
+        }
+
+        /**
+         * Return the instance this mapper is bound to.
+         *
+         * @return The active instance
+         */
+        public T getInstance() {
+            return t;
+        }
+
     }
 }
