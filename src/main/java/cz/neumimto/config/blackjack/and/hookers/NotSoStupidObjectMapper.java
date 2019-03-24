@@ -40,11 +40,11 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
 
     static {
         try {
-            CopyOnWriteArrayList serializers =
-                    (CopyOnWriteArrayList) TypeSerializers.getDefaultSerializers()
-                            .getClass()
-                            .getField("serializers")
-                            .get(null);
+            Field field = TypeSerializers.getDefaultSerializers()
+                    .getClass()
+                    .getDeclaredField("serializers");
+            field.setAccessible(true);
+            CopyOnWriteArrayList serializers =(CopyOnWriteArrayList) field.get(TypeSerializers.getDefaultSerializers());
             serializers.remove(3);
         } catch (IllegalAccessException e) {
             e.printStackTrace();
