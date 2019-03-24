@@ -2,14 +2,22 @@ package cz.neumimto.config.blackjack.and.hookers;
 
 import com.google.common.base.Preconditions;
 import com.google.common.reflect.TypeToken;
-import cz.neumimto.config.blackjack.and.hookers.annotations.*;
+import cz.neumimto.config.blackjack.and.hookers.annotations.AsCollectionImpl;
+import cz.neumimto.config.blackjack.and.hookers.annotations.CustomAdapter;
+import cz.neumimto.config.blackjack.and.hookers.annotations.Default;
+import cz.neumimto.config.blackjack.and.hookers.annotations.Discriminator;
+import cz.neumimto.config.blackjack.and.hookers.annotations.EnableSetterInjection;
+import cz.neumimto.config.blackjack.and.hookers.annotations.Setter;
+import cz.neumimto.config.blackjack.and.hookers.annotations.Static;
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.objectmapping.ObjectMapper;
 import ninja.leaping.configurate.objectmapping.ObjectMapperFactory;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import ninja.leaping.configurate.objectmapping.Setting;
+import ninja.leaping.configurate.objectmapping.serialize.ConfigSerializable;
 import ninja.leaping.configurate.objectmapping.serialize.TypeSerializer;
+import ninja.leaping.configurate.objectmapping.serialize.TypeSerializers;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.lang.reflect.Field;
@@ -21,6 +29,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
 
@@ -28,6 +37,25 @@ public class NotSoStupidObjectMapper<T> extends ObjectMapper<T> {
     protected Map<Class<?>, Map<String, Class<?>>> stubs = new HashMap<>();
 
     private Map<String, ObjectMapper.FieldData> cachedFields;
+
+    static {
+        try {
+            CopyOnWriteArrayList serializers =
+                    (CopyOnWriteArrayList) TypeSerializers.getDefaultSerializers()
+                            .getClass()
+                            .getField("serializers")
+                            .get(null);
+            serializers.remove(3);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+        }
+
+        TypeSerializers.getDefaultSerializers()
+                .registerPredicate(intput -> intput.getRawType().isAnnotationPresent(ConfigSerializable.class),
+                        new ClassTypeNodeSerializer());
+    }
 
     protected NotSoStupidObjectMapper(Class<T> clazz) throws ObjectMappingException {
         super(clazz);
